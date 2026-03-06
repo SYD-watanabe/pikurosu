@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ポケモン ピクロス</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+:root{--cell:24px;--hint:18px;--accent:#DC0A2D;--dark:#1f2937;--mid:#6b7280;
+  --light:#f3f4f6;--bg:#f8fafc;--card:#fff;--fill:#1f2937;--border:#d1d5db;
+  --b5:#6b7280;--hover:#dbeafe;--mark:#9ca3af}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);display:flex;
+  justify-content:center;align-items:center;min-height:100vh;
+  font-family:'Noto Sans JP',-apple-system,sans-serif;user-select:none}
+#app{background:var(--card);border-radius:20px;box-shadow:0 25px 80px rgba(0,0,0,.35);
+  max-width:660px;width:96vw;padding:20px;position:relative;overflow:hidden;min-height:460px}
+.btn{background:var(--accent);color:#fff;border:none;padding:8px 20px;font-family:inherit;
+  font-size:14px;cursor:pointer;border-radius:8px;font-weight:700;transition:all .15s;
+  box-shadow:0 2px 8px rgba(220,10,45,.3)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(220,10,45,.4)}
+.btn:active{transform:scale(.97)}
+.btn-ghost{background:transparent;color:var(--dark);box-shadow:none;border:2px solid var(--border)}
+.btn-ghost:hover{background:var(--light);box-shadow:none}
+.btn-sm{padding:6px 14px;font-size:12px}
+
+.title{text-align:center;padding:50px 10px 30px}
+.title h1{font-size:28px;color:var(--dark);margin-bottom:2px}
+.title h1 span{color:var(--accent)}
+.title h2{font-size:14px;color:var(--mid);margin-bottom:36px;font-weight:400}
+.title .start{font-size:18px;padding:12px 40px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 2px 8px rgba(220,10,45,.3)}50%{box-shadow:0 4px 20px rgba(220,10,45,.5)}}
+.title .sub{margin-top:40px;font-size:11px;color:var(--mid);line-height:2}
+
+.select-header{text-align:center;font-size:18px;font-weight:700;margin-bottom:16px;color:var(--dark)}
+.puzzle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;padding:4px}
+.puzzle-card{background:var(--bg);border:2px solid var(--border);padding:14px 10px;text-align:center;
+  cursor:pointer;border-radius:12px;transition:all .2s}
+.puzzle-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.08)}
+.puzzle-card .num{font-size:18px;font-weight:700;color:var(--dark)}
+.puzzle-card .stars{font-size:13px;margin:4px 0;color:#f59e0b}
+.puzzle-card .best{font-size:11px;color:var(--mid)}
+.back-row{text-align:center;margin-top:16px}
+
+.game-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.timer-wrap{text-align:center}
+.timer{font-size:24px;font-weight:700;color:var(--accent);letter-spacing:2px;font-variant-numeric:tabular-nums}
+.penalty-msg{color:var(--accent);font-size:11px;font-weight:700;animation:fadeUp .8s forwards;position:absolute}
+@keyframes fadeUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-20px)}}
+
+.board-wrap{overflow-x:auto;display:flex;justify-content:center;padding:4px 0}
+.board{display:inline-grid;gap:0;background:var(--border)}
+.board .corner{background:var(--bg)}
+.board .col-hint,.board .row-hint{background:var(--light);display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:700;color:var(--mid);
+  width:var(--hint);height:var(--hint);border:0.5px solid #e5e7eb}
+.board .col-hint.br5{border-right:2.5px solid var(--b5)}
+.board .row-hint.bb5{border-bottom:2.5px solid var(--b5)}
+.board .cell{width:var(--cell);height:var(--cell);background:#fff;
+  border:0.5px solid var(--border);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;transition:background .06s;font-size:calc(var(--cell)*0.5);
+  color:var(--mark);font-weight:700}
+.board .cell:hover{background:var(--hover)}
+.board .cell.filled{background:var(--fill);border-color:rgba(255,255,255,.1)}
+.board .cell.marked{background:#fff;color:var(--mark)}
+.board .cell.br5{border-right:2.5px solid var(--b5)}
+.board .cell.bb5{border-bottom:2.5px solid var(--b5)}
+.board .cell.filled.br5{border-right:2.5px solid rgba(255,255,255,.22)}
+.board .cell.filled.bb5{border-bottom:2.5px solid rgba(255,255,255,.22)}
+
+.game-bottom{display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.mode-toggle{display:flex;border:2px solid var(--border);border-radius:8px;overflow:hidden}
+.mode-btn{padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;border:none;
+  background:#fff;color:var(--dark);font-weight:600;transition:all .15s}
+.mode-btn.active{background:var(--dark);color:#fff}
+
+.modal-bg{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;z-index:10;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.modal{background:#fff;border-radius:16px;padding:20px;width:90%;max-width:340px;
+  max-height:85vh;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{text-align:center;margin-bottom:12px;font-size:16px;color:var(--dark)}
+.modal input{width:100%;padding:10px 12px;font-family:inherit;font-size:15px;
+  border:2px solid var(--border);background:var(--bg);color:var(--dark);
+  border-radius:10px;outline:none;transition:border-color .2s}
+.modal input:focus{border-color:var(--accent)}
+.modal input::placeholder{color:var(--mark)}
+.suggest-list{max-height:200px;overflow-y:auto;margin:10px 0;border:1px solid var(--border);
+  border-radius:8px}
+.suggest-item{padding:8px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid #f0f0f0;
+  transition:background .1s}
+.suggest-item:hover,.suggest-item.sel{background:var(--accent);color:#fff}
+.modal-btns{display:flex;gap:8px;justify-content:center;margin-top:12px}
+
+.result{text-align:center;padding:16px 10px}
+.result h2{font-size:24px;color:var(--accent);margin-bottom:4px}
+.result .pokemon-name{font-size:28px;font-weight:700;color:var(--dark);margin:4px 0}
+.result .pokemon-no{font-size:13px;color:var(--mid)}
+.result .mini-grid{display:inline-grid;gap:0;margin:12px auto;border:3px solid var(--dark);border-radius:4px}
+.result .mini-cell{width:13px;height:13px}
+.result .time-result{font-size:18px;font-weight:700;margin:12px 0;color:var(--dark)}
+.result .best-msg{font-size:13px;color:#f59e0b;font-weight:700;margin-bottom:10px}
+.result-btns{margin-top:16px;display:flex;gap:10px;justify-content:center}
+
+.msg-flash{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);
+  font-size:32px;font-weight:900;z-index:20;color:var(--accent);
+  animation:flashIn .7s forwards;text-shadow:0 2px 10px rgba(220,10,45,.3)}
+@keyframes flashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2.5)}
+  30%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.1)}}
+
+@media(max-width:640px){:root{--cell:20px;--hint:15px}}
+@media(max-width:480px){:root{--cell:15px;--hint:11px}
+  .board .col-hint,.board .row-hint{font-size:8px}
+  .board .cell{font-size:10px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+function P(s){return s.trim().split('\n').map(r=>r.trim().split('').map(c=>c==='#'?1:0))}
+
+const PUZZLES=[
+{name:'ピカチュウ',en:'Pikachu',no:25,diff:1,color:'#F8D030',grid:P(`
+..##..............##
+..##..............##
+...##............##.
+...###..........###.
+....###........###..
+.....###......###...
+......##########....
+.....############...
+...####..####..####.
+...################.
+..##################
+.#####.######.#####.
+..##################
+.....############...
+......##########....
+........######......
+.......##..##.......
+............##......
+...........####.....
+............###.....`)},
+{name:'フシギダネ',en:'Bulbasaur',no:1,diff:2,color:'#78C850',grid:P(`
+....................
+........####........
+.......######.......
+......########......
+.....##.####.##.....
+.......######.......
+...################.
+..##################
+.##.################
+####################
+####################
+.###################
+..##################
+...################.
+....##############..
+.....############...
+......##......##....
+......##......##....
+.....###.....###....
+....................`)},
+{name:'ヒトカゲ',en:'Charmander',no:4,diff:2,color:'#F08030',grid:P(`
+....................
+....................
+.......#####........
+......#######.......
+.....####.####......
+.....#########......
+......#######.......
+......########......
+.....##########.....
+.....##########.....
+......########......
+.......######.......
+.......######.......
+.......##.##........
+......##...##.......
+.....##....##.......
+..........###.......
+.........#####......
+..........####......
+...........##.......`)},
+{name:'ゼニガメ',en:'Squirtle',no:7,diff:2,color:'#6890F0',grid:P(`
+....................
+.......#####........
+......#######.......
+.....####.####......
+.....#########......
+......#######.......
+.......#####........
+......#######.......
+.....#########......
+....###########.....
+...#############....
+..####.#####.####...
+..###############...
+...#############....
+....###########.....
+.....#########......
+......##...##.......
+......##...##.......
+......##....###.....
+............###.....`)},
+{name:'プリン',en:'Jigglypuff',no:39,diff:1,color:'#FFB0C0',grid:P(`
+.........##.........
+........####........
+.........##.........
+......########......
+....############....
+...####.####.####...
+..################..
+.##################.
+.##################.
+.##################.
+.##################.
+.##################.
+..################..
+...##############...
+....############....
+......########......
+.......######.......
+........####........
+....................
+....................`)},
+{name:'ゲンガー',en:'Gengar',no:94,diff:3,color:'#705898',grid:P(`
+...#...........#....
+..###.........###...
+.#####.......#####..
+.#################..
+####################
+####################
+####################
+####################
+.##################.
+.##################.
+..################..
+..################..
+.####..######..####.
+.###....####....###.
+..##....####....##..
+........####........
+....................
+....................
+....................
+....................`)},
+{name:'カビゴン',en:'Snorlax',no:143,diff:1,color:'#445E6E',grid:P(`
+......########......
+.....##########.....
+....############....
+...##..######..##...
+..################..
+.##################.
+####################
+####################
+####..########..####
+####################
+####################
+####################
+.##################.
+..################..
+...##############...
+....############....
+.....##......##.....
+.....##......##.....
+....###.....###.....
+....................`)},
+{name:'ミュウ',en:'Mew',no:151,diff:3,color:'#F0A0B0',grid:P(`
+....................
+.....##.....##......
+.....##.....##......
+.....##########.....
+....##..####..##....
+....############....
+.....##########.....
+......########......
+.......######.......
+.......######.......
+........####........
+........####........
+........##..........
+.........##.........
+..........##........
+...........##.......
+............##......
+.............##.....
+..............##....
+...............##...`)},
+{name:'イーブイ',en:'Eevee',no:133,diff:2,color:'#C09050',grid:P(`
+.##...............##
+.###.............###
+..###...........###.
+..####.........####.
+...####.......####..
+...#####.....#####..
+....###########.....
+...#############....
+..####..###..####...
+.#################..
+.#################..
+..###############...
+...#############....
+....###########.....
+.....#########......
+......##...##.......
+......##...##.......
+.....###...###......
+....................
+....................`)},
+{name:'ミュウツー',en:'Mewtwo',no:150,diff:3,color:'#8060A0',grid:P(`
+....................
+.......######.......
+......########......
+.###..########..###.
+.###...######...###.
+.......######.......
+......########......
+.....##########.....
+....####.##.####....
+.....##########.....
+......########......
+.......######.......
+........####........
+........####........
+.........###........
+..........##........
+...........##.......
+............##......
+.............##.....
+..............##....`)}
+];
+
+const ALL_POKEMON=[
+'フシギダネ','フシギソウ','フシギバナ','ヒトカゲ','リザード','リザードン',
+'ゼニガメ','カメール','カメックス','キャタピー','トランセル','バタフリー',
+'ビードル','コクーン','スピアー','ポッポ','ピジョン','ピジョット',
+'コラッタ','ラッタ','オニスズメ','オニドリル','アーボ','アーボック',
+'ピカチュウ','ライチュウ','サンド','サンドパン','ニドラン♀','ニドリーナ',
+'ニドクイン','ニドラン♂','ニドリーノ','ニドキング','ピッピ','ピクシー',
+'ロコン','キュウコン','プリン','プクリン','ズバット','ゴルバット',
+'ナゾノクサ','クサイハナ','ラフレシア','パラス','パラセクト','コンパン',
+'モルフォン','ディグダ','ダグトリオ','ニャース','ペルシアン','コダック',
+'ゴルダック','マンキー','オコリザル','ガーディ','ウインディ','ニョロモ',
+'ニョロゾ','ニョロボン','ケーシィ','ユンゲラー','フーディン','ワンリキー',
+'ゴーリキー','カイリキー','マダツボミ','ウツドン','ウツボット','メノクラゲ',
+'ドククラゲ','イシツブテ','ゴローン','ゴローニャ','ポニータ','ギャロップ',
+'ヤドン','ヤドラン','コイル','レアコイル','カモネギ','ドードー',
+'ドードリオ','パウワウ','ジュゴン','ベトベター','ベトベトン','シェルダー',
+'パルシェン','ゴース','ゴースト','ゲンガー','イワーク','スリープ',
+'スリーパー','クラブ','キングラー','ビリリダマ','マルマイン','タマタマ',
+'ナッシー','カラカラ','ガラガラ','サワムラー','エビワラー','ベロリンガ',
+'ドガース','マタドガス','サイホーン','サイドン','ラッキー','モンジャラ',
+'ガルーラ','タッツー','シードラ','トサキント','アズマオウ','ヒトデマン',
+'スターミー','バリヤード','ストライク','ルージュラ','エレブー','ブーバー',
+'カイロス','ケンタロス','コイキング','ギャラドス','ラプラス','メタモン',
+'イーブイ','シャワーズ','サンダース','ブースター','ポリゴン','オムナイト',
+'オムスター','カブト','カブトプス','プテラ','カビゴン','フリーザー',
+'サンダー','ファイヤー','ミニリュウ','ハクリュー','カイリュー','ミュウツー','ミュウ'
+];
+
+let S={screen:'title',puzzle:null,pidx:-1,grid:null,timer:0,tid:null,
+  mode:'fill',modal:false,guess:'',selIdx:-1,solved:false,bestTimes:{},
+  guessTime:null,penalties:0,composing:false};
+
+const $=id=>document.getElementById(id);
+const app=()=>$('app');
+function toKata(s){return s.replace(/[\u3041-\u3096]/g,c=>String.fromCharCode(c.charCodeAt(0)+0x60))}
+function getHints(line){const h=[];let c=0;for(const v of line){if(v)c++;else if(c){h.push(c);c=0}}if(c)h.push(c);return h.length?h:[0]}
+function rowHints(g){return g.map(r=>getHints(r))}
+function colHints(g){const cols=[];for(let c=0;c<g[0].length;c++){cols.push(getHints(g.map(r=>r[c])))}return cols}
+function fmt(t){const m=Math.floor(t/60),s=t%60;return m+':'+String(s).padStart(2,'0')}
+function loadBest(){try{S.bestTimes=JSON.parse(localStorage.getItem('pkpicross3')||'{}')}catch(e){S.bestTimes={}}}
+function saveBest(idx,t){const k='p'+idx;if(!S.bestTimes[k]||t<S.bestTimes[k]){S.bestTimes[k]=t;localStorage.setItem('pkpicross3',JSON.stringify(S.bestTimes));return true}return false}
+
+function render(){
+  const el=app();
+  if(S.screen==='title')renderTitle(el);
+  else if(S.screen==='select')renderSelect(el);
+  else if(S.screen==='game')renderGame(el);
+  else if(S.screen==='result')renderResult(el);
+}
+
+function renderTitle(el){
+  el.innerHTML='<div class="title"><h1><span>ポケモン</span> ピクロス</h1>'+
+    '<h2>ヒントから絵を完成させて、ポケモンを当てよう！</h2>'+
+    '<button class="btn start" onclick="goSelect()">はじめる</button>'+
+    '<div class="sub">左クリック: マスをぬる ／ 右クリック: ×マーク<br>'+
+    '数字のヒントをもとにマスを塗りつぶそう<br>途中でも予想ボタンでポケモンの名前を当てられるぞ！</div></div>';
+}
+
+function renderSelect(el){
+  let c='';
+  PUZZLES.forEach((p,i)=>{
+    const b=S.bestTimes['p'+i];
+    c+='<div class="puzzle-card" onclick="startPuzzle('+i+')"><div class="num">No.'+(i+1)+
+      '</div><div class="stars">'+'★'.repeat(p.diff)+'☆'.repeat(3-p.diff)+
+      '</div><div class="best">'+(b?'BEST '+fmt(b):'- - -')+'</div></div>';
+  });
+  el.innerHTML='<div class="select-header">パズルをえらぼう</div><div class="puzzle-grid">'+c+
+    '</div><div class="back-row"><button class="btn-ghost btn btn-sm" onclick="goTitle()">← もどる</button></div>';
+}
+
+function renderGame(el){
+  const p=S.puzzle,g=p.grid,R=g.length,C=g[0].length;
+  const rh=rowHints(g),ch=colHints(g);
+  const maxR=Math.max(...rh.map(h=>h.length));
+  const maxC=Math.max(...ch.map(h=>h.length));
+
+  let html='<div class="game-top">'+
+    '<button class="btn-ghost btn btn-sm" onclick="goSelect()">←</button>'+
+    '<div class="timer-wrap"><div class="timer" id="timer">'+fmt(S.timer)+'</div></div>'+
+    '<button class="btn btn-sm" onclick="openGuess()">💡 予想する</button></div>'+
+    '<div class="board-wrap"><div class="board" id="board" style="grid-template-columns:repeat('+
+    maxR+',var(--hint)) repeat('+C+',var(--cell));grid-template-rows:repeat('+
+    maxC+',var(--hint)) repeat('+R+',var(--cell));" oncontextmenu="return false">';
+
+  // Corner
+  for(let r=0;r<maxC;r++)for(let c=0;c<maxR;c++)
+    html+='<div class="corner" style="grid-row:'+(r+1)+';grid-column:'+(c+1)+'"></div>';
+
+  // Column hints
+  for(let c=0;c<C;c++){
+    const h=ch[c];
+    const b5=((c+1)%5===0&&c<C-1)?' br5':'';
+    for(let r=0;r<maxC;r++){
+      const idx=r-(maxC-h.length);
+      html+='<div class="col-hint'+b5+'" style="grid-row:'+(r+1)+';grid-column:'+(maxR+c+1)+'">'+(idx>=0?h[idx]:'')+'</div>';
+    }
+  }
+  // Row hints
+  for(let r=0;r<R;r++){
+    const h=rh[r];
+    const b5=((r+1)%5===0&&r<R-1)?' bb5':'';
+    for(let c=0;c<maxR;c++){
+      const idx=c-(maxR-h.length);
+      html+='<div class="row-hint'+b5+'" style="grid-row:'+(maxC+r+1)+';grid-column:'+(c+1)+'">'+(idx>=0?h[idx]:'')+'</div>';
+    }
+  }
+  // Cells
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const v=S.grid[r][c];
+    let b5='';
+    if((c+1)%5===0&&c<C-1)b5+=' br5';
+    if((r+1)%5===0&&r<R-1)b5+=' bb5';
+    html+='<div class="cell'+(v===1?' filled':v===2?' marked':'')+b5+
+      '" style="grid-row:'+(maxC+r+1)+';grid-column:'+(maxR+c+1)+
+      '" data-r="'+r+'" data-c="'+c+'">'+(v===2?'×':'')+'</div>';
+  }
+  html+='</div></div><div class="game-bottom"><div class="mode-toggle">'+
+    '<button class="mode-btn'+(S.mode==='fill'?' active':'')+'" onclick="setMode(\'fill\')">■ ぬる</button>'+
+    '<button class="mode-btn'+(S.mode==='mark'?' active':'')+'" onclick="setMode(\'mark\')">× しるし</button>'+
+    '</div><button class="btn-ghost btn btn-sm" onclick="resetGrid()">リセット</button></div>';
+  if(S.modal) html+=renderGuessModal();
+  el.innerHTML=html;
+  attachGridEvents();
+}
+
+function renderGuessModal(){
+  const q=toKata(S.guess);
+  const filtered=q?ALL_POKEMON.filter(n=>n.includes(q)):ALL_POKEMON;
+  const list=filtered.slice(0,50);
+  let items=list.map((n,i)=>
+    '<div class="suggest-item'+(i===S.selIdx?' sel':'')+'" data-name="'+n+'">'+n+'</div>'
+  ).join('');
+  return '<div class="modal-bg" id="modal-bg"><div class="modal"><h3>何のポケモン？</h3>'+
+    '<input type="text" id="guess-input" placeholder="なまえを入力..." value="'+S.guess+'" autocomplete="off">'+
+    '<div class="suggest-list" id="suggest-list">'+items+'</div>'+
+    '<div class="modal-btns"><button class="btn btn-sm" id="guess-submit">答える！</button>'+
+    '<button class="btn-ghost btn btn-sm" onclick="closeGuess()">もどる</button></div></div></div>';
+}
+
+function renderResult(el){
+  const p=S.puzzle,R=p.grid.length,C=p.grid[0].length;
+  let mg='';
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    mg+='<div class="mini-cell" style="grid-row:'+(r+1)+';grid-column:'+(c+1)+
+      ';background:'+(p.grid[r][c]?p.color:'#f0f0f0')+'"></div>';
+  }
+  el.innerHTML='<div class="result"><h2>'+(S.guessTime!==null?'🎉 正解！':'✨ 完成！')+'</h2>'+
+    '<div class="pokemon-name">'+p.name+'</div>'+
+    '<div class="pokemon-no">No.'+String(p.no).padStart(3,'0')+' '+p.en+'</div>'+
+    '<div class="mini-grid" style="grid-template-columns:repeat('+C+',13px);grid-template-rows:repeat('+R+',13px)">'+mg+'</div>'+
+    '<div class="time-result">⏱ '+fmt(S.guessTime!==null?S.guessTime:S.timer)+'</div>'+
+    (S.isNewBest?'<div class="best-msg">⭐ ベストタイム更新！</div>':'')+
+    '<div class="result-btns"><button class="btn btn-sm" onclick="startPuzzle('+S.pidx+')">もう一度</button>'+
+    '<button class="btn-ghost btn btn-sm" onclick="goSelect()">パズル選択</button></div></div>';
+}
+
+// ===== GRID EVENTS =====
+let dragging=false,dragAction=null;
+function attachGridEvents(){
+  const board=$('board');if(!board)return;
+  board.addEventListener('mousedown',onGridDown);
+  board.addEventListener('mouseover',onGridOver);
+  document.addEventListener('mouseup',()=>{dragging=false});
+  board.addEventListener('touchstart',onTouchStart,{passive:false});
+  board.addEventListener('touchmove',onTouchMove,{passive:false});
+  board.addEventListener('touchend',()=>{dragging=false});
+  if(S.modal){
+    const inp=$('guess-input');
+    if(inp){
+      setTimeout(()=>inp.focus(),100);
+      inp.addEventListener('compositionstart',()=>{S.composing=true});
+      inp.addEventListener('compositionend',()=>{
+        S.composing=false;S.guess=inp.value;S.selIdx=-1;updateSuggestions();
+      });
+      inp.addEventListener('input',()=>{
+        if(!S.composing){S.guess=inp.value;S.selIdx=-1;updateSuggestions()}
+      });
+      inp.addEventListener('keydown',onGuessKey);
+    }
+    const sb=$('guess-submit');if(sb)sb.addEventListener('click',submitGuess);
+    const bg=$('modal-bg');if(bg)bg.addEventListener('click',e=>{if(e.target===bg)closeGuess()});
+  }
+}
+
+function cellAt(el){if(!el||!el.dataset||el.dataset.r===undefined)return null;return{r:+el.dataset.r,c:+el.dataset.c}}
+function onGridDown(e){
+  e.preventDefault();const cell=cellAt(e.target);if(!cell||S.solved)return;
+  dragging=true;const v=S.grid[cell.r][cell.c];
+  if(e.button===2||S.mode==='mark'){dragAction=v===2?0:2}else{dragAction=v===1?0:1}
+  applyCell(cell.r,cell.c,dragAction);
+}
+function onGridOver(e){if(!dragging)return;const cell=cellAt(e.target);if(cell)applyCell(cell.r,cell.c,dragAction)}
+function onTouchStart(e){
+  e.preventDefault();const t=e.touches[0],el=document.elementFromPoint(t.clientX,t.clientY);
+  const cell=cellAt(el);if(!cell||S.solved)return;dragging=true;const v=S.grid[cell.r][cell.c];
+  if(S.mode==='mark'){dragAction=v===2?0:2}else{dragAction=v===1?0:1}
+  applyCell(cell.r,cell.c,dragAction);
+}
+function onTouchMove(e){
+  e.preventDefault();if(!dragging)return;const t=e.touches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);const cell=cellAt(el);
+  if(cell)applyCell(cell.r,cell.c,dragAction);
+}
+function applyCell(r,c,v){if(S.grid[r][c]===v)return;S.grid[r][c]=v;updateCell(r,c);checkComplete()}
+function updateCell(r,c){
+  const el=document.querySelector('.cell[data-r="'+r+'"][data-c="'+c+'"]');
+  if(!el)return;const v=S.grid[r][c];
+  const C=S.puzzle.grid[0].length,R=S.puzzle.grid.length;
+  let b5='';
+  if((c+1)%5===0&&c<C-1)b5+=' br5';
+  if((r+1)%5===0&&r<R-1)b5+=' bb5';
+  el.className='cell'+(v===1?' filled':v===2?' marked':'')+b5;
+  el.textContent=v===2?'×':'';
+}
+
+// ===== GAME LOGIC =====
+function goTitle(){S.screen='title';stopTimer();render()}
+function goSelect(){S.screen='select';stopTimer();render()}
+function startPuzzle(idx){
+  S.screen='game';S.pidx=idx;S.puzzle=PUZZLES[idx];
+  const R=S.puzzle.grid.length,C=S.puzzle.grid[0].length;
+  S.grid=Array.from({length:R},()=>Array(C).fill(0));
+  S.timer=0;S.solved=false;S.modal=false;S.guess='';S.selIdx=-1;
+  S.guessTime=null;S.penalties=0;S.isNewBest=false;S.mode='fill';
+  render();startTimer();
+}
+function setMode(m){S.mode=m;render()}
+function resetGrid(){
+  const R=S.puzzle.grid.length,C=S.puzzle.grid[0].length;
+  S.grid=Array.from({length:R},()=>Array(C).fill(0));render();
+}
+function checkComplete(){
+  const g=S.puzzle.grid,R=g.length,C=g[0].length;
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    if(g[r][c]!==(S.grid[r][c]===1?1:0))return;
+  }endGame(false);
+}
+function endGame(byGuess){
+  S.solved=true;stopTimer();
+  const t=byGuess?S.guessTime:S.timer;S.isNewBest=saveBest(S.pidx,t);
+  const g=S.puzzle.grid,R=g.length,C=g[0].length;
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){S.grid[r][c]=g[r][c]?1:0}
+  setTimeout(()=>{S.screen='result';render()},byGuess?600:300);
+  const msg=document.createElement('div');msg.className='msg-flash';
+  msg.textContent=byGuess?'正解！':'完成！';app().appendChild(msg);
+}
+function startTimer(){stopTimer();S.tid=setInterval(()=>{S.timer++;const t=$('timer');if(t)t.textContent=fmt(S.timer)},1000)}
+function stopTimer(){if(S.tid){clearInterval(S.tid);S.tid=null}}
+
+// ===== GUESS =====
+function openGuess(){if(S.solved)return;S.modal=true;S.guess='';S.selIdx=-1;render()}
+function closeGuess(){S.modal=false;render()}
+function onGuessKey(e){
+  const q=toKata(S.guess),filtered=q?ALL_POKEMON.filter(n=>n.includes(q)):ALL_POKEMON;
+  const list=filtered.slice(0,50);
+  if(e.key==='ArrowDown'){e.preventDefault();S.selIdx=Math.min(S.selIdx+1,list.length-1);updateSuggestions()}
+  else if(e.key==='ArrowUp'){e.preventDefault();S.selIdx=Math.max(S.selIdx-1,-1);updateSuggestions()}
+  else if(e.key==='Enter'){e.preventDefault();if(S.selIdx>=0&&S.selIdx<list.length){S.guess=list[S.selIdx];const inp=$('guess-input');if(inp)inp.value=S.guess;S.selIdx=-1;updateSuggestions()}else submitGuess()}
+}
+function updateSuggestions(){
+  const sl=$('suggest-list');if(!sl)return;
+  const q=toKata(S.guess),filtered=q?ALL_POKEMON.filter(n=>n.includes(q)):ALL_POKEMON;
+  const list=filtered.slice(0,50);
+  sl.innerHTML=list.map((n,i)=>'<div class="suggest-item'+(i===S.selIdx?' sel':'')+'" data-name="'+n+'">'+n+'</div>').join('');
+  if(S.selIdx>=0){const se=sl.querySelector('.sel');if(se)se.scrollIntoView({block:'nearest'})}
+  sl.querySelectorAll('.suggest-item').forEach(item=>{
+    item.addEventListener('click',()=>{
+      S.guess=item.dataset.name;const inp=$('guess-input');if(inp)inp.value=S.guess;
+      S.selIdx=-1;updateSuggestions();
+    });
+  });
+}
+function submitGuess(){
+  const guess=toKata(S.guess.trim()),lower=S.guess.trim().toLowerCase();
+  if(!guess&&!lower)return;
+  if(guess===S.puzzle.name||lower===S.puzzle.en.toLowerCase()){
+    S.guessTime=S.timer;closeGuess();endGame(true);
+  }else{
+    S.timer+=15;S.penalties++;
+    const tel=$('timer');if(tel)tel.textContent=fmt(S.timer);
+    const pe=document.createElement('div');pe.className='penalty-msg';pe.textContent='ハズレ！ +15秒';pe.style.cssText='right:10px;top:40px';
+    app().appendChild(pe);setTimeout(()=>pe.remove(),900);
+    S.guess='';const inp=$('guess-input');if(inp){inp.value='';inp.focus()}
+    S.selIdx=-1;updateSuggestions();
+  }
+}
+
+function init(){loadBest();render()}
+init();
+</script>
+</body>
+</html>
